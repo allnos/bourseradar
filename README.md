@@ -1,2 +1,2 @@
-# bourseradar
-Recherche automitisée de valuers sous-cotées
+# Radar
+Recherche automitisée de valeurs boursières sous-cotées
