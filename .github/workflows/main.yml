@@ -1,43 +1,40 @@
 name: Update Stock Data
 
 on:
-  workflow_dispatch: # Bouton manuel uniquement pour le test
+  schedule:
+    - cron: '0 0 * * *' # Tous les jours à minuit
+  workflow_dispatch:    # Bouton manuel
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    permissions:
+      contents: write  # Cette ligne force la permission d'écriture
 
     steps:
-    # 1. On récupère vos fichiers
-    - name: Check out repository
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    # 2. On installe Python
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
 
-    # 3. On installe yfinance directement (c'est souvent là que ça bloquait)
     - name: Install dependencies
       run: |
-        pip install yfinance pandas
+        pip install yfinance pandas lxml html5lib requests beautifulsoup4
 
-    # 4. On vérifie que le fichier existe avant de le lancer
-    - name: Check file existence
-      run: |
-        ls -la
-
-    # 5. On lance le script
     - name: Run Screener
       run: |
+        # Assurez-vous que le fichier s'appelle bien screener.py
         python screener.py
 
-    # 6. On sauvegarde (seulement si le script a marché)
     - name: Commit and Push
       run: |
         git config --global user.name 'GitHub Action'
         git config --global user.email 'action@github.com'
         git add data.json
-        git commit -m "Update data" || echo "No changes to commit"
-        git push
+        # On vérifie s'il y a des changements avant de commiter
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update stock data" && git push origin HEAD:main)
