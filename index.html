@@ -8,51 +8,35 @@
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; text-align: center; }
-        h2.category { margin-top: 40px; padding: 10px 0; border-bottom: 2px solid #34495e; color: #34495e; }
         .update-time { text-align: center; color: #7f8c8d; font-size: 0.9em; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #34495e; color: white; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #ddd; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         tr:hover { background-color: #e8f4f8; }
+        /* Style pour les badges P/E et tag */
         .pe-tag { color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; display: inline-block; min-width: 40px; text-align: center; }
+        .tag-badge { font-size: 0.8em; color: white; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🌍 Radar Boursier : Opportunités Monde (Critères Buffett)</h1>
+    <h1>🎯 Radar Boursier : Opportunités Buffett (P/E < 25)</h1>
     <p class="update-time" id="lastUpdate">Chargement des données...</p>
 
-    <h2 class="category">1. Catégorie : Sous-évalué (P/E Ratio < 15) <span style="font-size: 0.8em; color: #27ae60;">🟢</span></h2>
-    <table id="table-undervalued">
+    <table id="stockTable">
         <thead>
             <tr>
                 <th>Symbole</th>
-                <th>Société</th>
+                <th>Catégorie Buffett</th> <th>Société</th>
                 <th>Secteur</th>
                 <th>P/E Ratio</th>
                 <th>ROE</th>
                 <th>Prix</th>
             </tr>
         </thead>
-        <tbody id="tbody-undervalued">
-            </tbody>
-    </table>
-
-    <h2 class="category">2. Catégorie : Qualité/Prix (P/E 15-25 ET ROE > 15%) <span style="font-size: 0.8em; color: #2980b9;">🔵</span></h2>
-    <table id="table-quality">
-        <thead>
-            <tr>
-                <th>Symbole</th>
-                <th>Société</th>
-                <th>Secteur</th>
-                <th>P/E Ratio</th>
-                <th>ROE</th>
-                <th>Prix</th>
-            </tr>
-        </thead>
-        <tbody id="tbody-quality">
+        <tbody id="tableBody">
             </tbody>
     </table>
 
@@ -61,18 +45,6 @@
 <script>
     const jsonPath = 'data.json';
     
-    // Fonction pour créer une ligne de tableau
-    function createRow(stock, badgeColor) {
-        return `<tr>
-            <td><b>${stock.symbol}</b></td>
-            <td>${stock.name}</td>
-            <td>${stock.sector}</td>
-            <td><span class="pe-tag" style="background-color:${badgeColor}">${stock.pe}</span></td>
-            <td>${stock.roe}%</td>
-            <td>${stock.price} ${stock.currency}</td>
-        </tr>`;
-    }
-
     // Fonction pour charger les données
     fetch(jsonPath)
         .then(response => {
@@ -84,41 +56,31 @@
         .then(jsonData => {
             document.getElementById('lastUpdate').textContent = "Dernière mise à jour : " + jsonData.last_updated;
             
-            const tbodyUndervalued = document.getElementById('tbody-undervalued');
-            const tbodyQuality = document.getElementById('tbody-quality');
+            const tbody = document.getElementById('tableBody');
             
             if(jsonData.data.length === 0) {
-                // Si aucune donnée n'est trouvée, on affiche un message dans les deux sections
-                const noDataRow = "<tr><td colspan='6' style='text-align:center'>Aucune valeur trouvée selon ce critère aujourd'hui.</td></tr>";
-                tbodyUndervalued.innerHTML = noDataRow;
-                tbodyQuality.innerHTML = noDataRow;
+                tbody.innerHTML = "<tr><td colspan='7' style='text-align:center'>Aucune valeur trouvée selon vos critères aujourd'hui.</td></tr>";
                 return;
             }
 
-            let countUndervalued = 0;
-            let countQuality = 0;
-
             jsonData.data.forEach(stock => {
-                let rowHtml;
-
-                if (stock.tag === "Sous-évalué") {
-                    rowHtml = createRow(stock, "#27ae60"); // Vert
-                    tbodyUndervalued.innerHTML += rowHtml;
-                    countUndervalued++;
-                } else if (stock.tag === "Qualité/Prix") {
-                    rowHtml = createRow(stock, "#2980b9"); // Bleu
-                    tbodyQuality.innerHTML += rowHtml;
-                    countQuality++;
-                }
+                // Définition des couleurs des badges selon la catégorie Buffett
+                let peColor = stock.tag === "Sous-évalué" ? "#27ae60" : "#2980b9";
+                let tagColor = stock.tag === "Sous-évalué" ? "#27ae60" : "#2980b9";
+                
+                const row = `<tr>
+                    <td><b>${stock.symbol}</b></td>
+                    <td>
+                        <span class="tag-badge" style="background-color:${tagColor}">${stock.tag}</span>
+                    </td>
+                    <td>${stock.name}</td>
+                    <td>${stock.sector}</td>
+                    <td><span class="pe-tag" style="background-color:${peColor}">${stock.pe}</span></td>
+                    <td>${stock.roe}%</td>
+                    <td>${stock.price} ${stock.currency}</td>
+                </tr>`;
+                tbody.innerHTML += row;
             });
-
-            // Affichage des messages si une catégorie est vide
-            if (countUndervalued === 0) {
-                tbodyUndervalued.innerHTML = "<tr><td colspan='6' style='text-align:center'>Aucune valeur trouvée selon ce critère aujourd'hui.</td></tr>";
-            }
-            if (countQuality === 0) {
-                tbodyQuality.innerHTML = "<tr><td colspan='6' style='text-align:center'>Aucune valeur trouvée selon ce critère aujourd'hui.</td></tr>";
-            }
         })
         .catch(error => {
             document.getElementById('lastUpdate').textContent = "Erreur de chargement des données. Le robot n'a pas encore fini ou a échoué. Détail: " + error.message;
