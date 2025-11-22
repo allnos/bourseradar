@@ -131,7 +131,7 @@ def run_analysis():
             # Critère 2 : P/E 15-25 MAIS ROE > 15% (Qualité/Prix / Le Moat de Munger)
             cond_quality = (pe is not None and 15 <= pe < 25 and roe is not None and roe > 0.15)
             
-            if cond_cheap or cond_quality:
+         if cond_cheap or cond_quality:
                 name = info.get('longName', ticker)
                 sector = info.get('sector', 'N/A')
                 currency = info.get('currency', 'USD')
@@ -139,11 +139,13 @@ def run_analysis():
                 
                 print(f"✅ TROUVÉ: {ticker} - {name} ({tag}, P/E: {pe:.2f})")
                 
+                # --- NOUVEAU BLOC AVEC LE ROE EN % ---
                 undervalued_stocks.append({
                     "symbol": ticker,
                     "name": name,
                     "sector": sector,
                     "pe": round(pe, 2),
+                    "roe": round(roe * 100, 2) if roe else 0, # <-- Le ROE est maintenant enregistré ici en %
                     "price": round(price, 2),
                     "currency": currency,
                     "tag": tag
