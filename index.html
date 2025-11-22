@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar Boursier : Valeurs Sous-évaluées</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; }
+        .update-time { text-align: center; color: #7f8c8d; font-size: 0.9em; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #34495e; color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #ddd; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #e8f4f8; }
+        .pe-tag { background: #27ae60; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+        .price-tag { color: #7f8c8d; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌍 Opportunités Mondiales (P/E < 20)</h1>
+    <p class="update-time" id="lastUpdate">Chargement des données...</p>
+
+    <table id="stockTable">
+        <thead>
+            <tr>
+                <th>Symbole</th>
+                <th>Société</th>
+                <th>Secteur</th>
+                <th>P/E Ratio</th>
+                <th>Prix</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    // Fonction pour charger les données
+    fetch('data.json')
+        .then(response => response.json())
+        .then(jsonData => {
+            document.getElementById('lastUpdate').textContent = "Dernière mise à jour : " + jsonData.last_updated;
+            
+            const tbody = document.getElementById('tableBody');
+            // Si la liste est vide
+            if(jsonData.data.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='5' style='text-align:center'>Aucune valeur trouvée selon vos critères aujourd'hui.</td></tr>";
+                return;
+            }
+
+            jsonData.data.forEach(stock => {
+                const row = `<tr>
+                    <td><b>${stock.symbol}</b></td>
+                    <td>${stock.name}</td>
+                    <td>${stock.sector}</td>
+                    <td><span class="pe-tag">${stock.pe}</span></td>
+                    <td>${stock.price} ${stock.currency}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        })
+        .catch(error => {
+            document.getElementById('lastUpdate').textContent = "En attente de la première mise à jour de minuit...";
+            console.log('Le fichier data.json n\'existe pas encore, c\'est normal si vous venez de créer le site.', error);
+        });
+</script>
+
+</body>
+</html>
