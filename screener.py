@@ -3,25 +3,26 @@ import pandas as pd
 import json
 import datetime
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
-# --- BUFFETT FILTERS & CRITERIA ---
+# --- FILTRES ET CRITÈRES BUFFETT ---
 
-# Secteurs typiquement évités par Buffett (trop complexe, trop volatile, trop cyclique)
+# Secteurs exclus (Qualitatif) : Trop cycliques ou complexes pour une analyse simplifiée.
 EXCLUDED_SECTORS = [
     'Technology', 'Biotechnology', 'Basic Materials', 'Energy', 
     'Oil & Gas', 'Mining', 'Semiconductors', 'Aerospace & Defense', 
-    'Capital Goods', 'Industrials' 
+    'Capital Goods', 'Industrials', 'Real Estate' 
 ]
 
-# Secteurs exemptés du critère strict de Dette/Capitaux Propres (< 1.0)
-# Car ils utilisent la dette ou l'effet de levier de manière structurelle (Banques, Utilities)
+# Secteurs exemptés du critère strict de Dette/Capitaux Propres (< 1.0).
+# Car ils utilisent l'effet de levier de manière structurelle (Banques, Services Publics).
 EXEMPTED_DEBT_SECTORS = ['Financial Services', 'Utilities']
 
 
-# --- FONCTIONS UTILITAIRES DE SÉCURITÉ ---
+# --- 1. FONCTIONS ROBUSTES DE CALCUL DES RATIOS ---
 
 def get_safe_float(info, key, reject_value):
-    """Récupère une valeur et garantit qu'elle est un float. Sinon, renvoie une valeur de rejet."""
+    """Récupère une valeur de manière sécurisée ou renvoie une valeur de rejet."""
     val = info.get(key)
     try:
         return float(val) if val is not None else reject_value
@@ -29,14 +30,10 @@ def get_safe_float(info, key, reject_value):
         return reject_value
 
 def calculate_roe(stock):
-    """Calcule le Return on Equity (ROE) à partir du bilan et du compte de résultat."""
+    """Calcule le Return on Equity (ROE)."""
     try:
-        # Bénéfice Net (Net Income) - Le plus récent de l'année
         net_income = stock.financials.loc['Net Income'].iloc[0]
-        
-        # Capitaux Propres (Total Stockholder Equity) - Le plus récent du bilan
         total_equity = stock.balance_sheet.loc['Total Stockholder Equity'].iloc[0]
-        
         if total_equity > 0:
             return net_income / total_equity
         return -1.0 
@@ -44,14 +41,10 @@ def calculate_roe(stock):
         return -1.0
 
 def calculate_gpm(stock):
-    """Calcule la Marge Brute (Gross Profit Margin) à partir du compte de résultat."""
+    """Calcule la Marge Brute (Gross Profit Margin)."""
     try:
-        # Bénéfice Brut (Gross Profit) - Le plus récent
         gross_profit = stock.financials.loc['Gross Profit'].iloc[0]
-        
-        # Revenus (Total Revenue) - Le plus récent
         total_revenue = stock.financials.loc['Total Revenue'].iloc[0]
-        
         if total_revenue > 0:
             return gross_profit / total_revenue
         return -1.0
@@ -59,193 +52,135 @@ def calculate_gpm(stock):
         return -1.0
 
 def calculate_de_ratio(stock):
-    """Calcule le Ratio Dette/Capitaux Propres (Debt-to-Equity) à partir du bilan."""
+    """Calcule le Ratio Dette/Capitaux Propres (Debt-to-Equity)."""
     try:
-        # Dette Totale (Total Debt)
-        # Utiliser l'info dict comme fallback si le bilan est vide pour certaines actions 
-        total_debt = get_safe_float(stock.info, 'totalDebt', reject_value=0.0)
-        
-        # Capitaux Propres (Total Stockholder Equity)
-        total_equity = get_safe_float(stock.info, 'totalStockholderEquity', reject_value=-1.0)
-
-        # Si les données du bilan sont disponibles, utiliser la méthode .loc pour la robustesse
-        if not stock.balance_sheet.empty and 'Total Debt' in stock.balance_sheet.index:
-             total_debt = stock.balance_sheet.loc['Total Debt'].iloc[0]
-             total_equity = stock.balance_sheet.loc['Total Stockholder Equity'].iloc[0]
+        # Tente de récupérer les données des états financiers pour plus de précision
+        total_debt = stock.balance_sheet.loc['Total Debt'].iloc[0]
+        total_equity = stock.balance_sheet.loc['Total Stockholder Equity'].iloc[0]
 
         if total_equity > 0:
             return total_debt / total_equity
-        return 9999.0 # Rejet si l'équité est négative ou nulle
+        return 9999.0 
     except Exception:
+        # Fallback si les états financiers ne sont pas disponibles
+        total_debt = get_safe_float(stock.info, 'totalDebt', reject_value=0.0)
+        total_equity = get_safe_float(stock.info, 'totalStockholderEquity', reject_value=-1.0)
+        if total_equity > 0:
+            return total_debt / total_equity
         return 9999.0
 
 
-# --- FONCTIONS DE RÉCUPÉRATION DYNAMIQUE DES TICKERS (Inclure la vôtre ici) ---
+# --- 2. FONCTIONS DE RÉCUPÉRATION DES TICKERS (VIA WIKIPEDIA) ---
 
-# --- DÉBUT DE VOS FONCTIONS DE RÉCUPÉRATION ---
-def get_sp500_tickers():
-    """Récupère le S&P 500 (USA) et corrige le format des tickers pour yfinance."""
+def get_tickers_from_wiki(url, table_index, symbol_col, suffix=""):
+    """Fonction générique pour scraper les tickers depuis une page Wikipedia."""
     try:
-        print("Récupération S&P 500 (USA)...")
-        df = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
-        return [t.replace('.', '-') for t in df['Symbol'].tolist()]
-    except:
+        print(f"  > Scraping de {url}...")
+        df = pd.read_html(url)[table_index]
+        return [t.replace('.', '-') + suffix for t in df[symbol_col].tolist()]
+    except Exception as e:
+        print(f"  > Erreur lors du scraping de {url}: {e}")
         return []
-
-def get_nasdaq100_tickers():
-    """Récupère le NASDAQ 100 (USA) et corrige le format des tickers pour yfinance."""
-    try:
-        print("Récupération NASDAQ 100 (USA)...")
-        df = pd.read_html('https://en.wikipedia.org/wiki/Nasdaq-100')[4]
-        col_name = 'Symbol' if 'Symbol' in df.columns else 'Ticker'
-        return [t.replace('.', '-') for t in df[col_name].tolist()]
-    except:
-        return []
-
-def get_cac40_tickers():
-    """Récupère le CAC 40 (France)"""
-    try:
-        print("Récupération CAC 40 (France)...")
-        df = pd.read_html('https://en.wikipedia.org/wiki/CAC_40')[4]
-        return [t + ".PA" for t in df['Ticker'].tolist()]
-    except:
-        return []
-
-def get_dax_tickers():
-    """Récupère le DAX (Allemagne)"""
-    try:
-        print("Récupération DAX (Allemagne)...")
-        df = pd.read_html('https://en.wikipedia.org/wiki/DAX')[4]
-        return [t if ".DE" in t else t + ".DE" for t in df['Ticker'].tolist()]
-    except:
-        return []
-
-def get_ftse100_tickers():
-    """Récupère le FTSE 100 (Royaume-Uni)"""
-    try:
-        print("Récupération FTSE 100 (UK)...")
-        df = pd.read_html('https://en.wikipedia.org/wiki/FTSE_100_Index')[4]
-        return [t + ".L" for t in df['Ticker'].tolist()]
-    except:
-        return []
-
-def get_major_europe_japan_manual():
-    """Liste manuelle des leaders pour la couverture des bourses difficiles à scraper"""
-    print("Ajout des leaders Japonais, Suisses, Canadiens, etc. (Liste manuelle)...")
-    return [
-        "7203.T", "6758.T", "9984.T", "6861.T", "8306.T", "9432.T", "7974.T", 
-        "NESN.SW", "NOVN.SW", "ROG.SW", "UBSG.SW", "ZURN.SW",
-        "FER.MI", "ENI.MI", "ISP.MI", "ENEL.MI", 
-        "ITX.MC", "IBE.MC",
-        "RY.TO", "TD.TO", "ENB.TO",
-        "0700.HK", "9988.HK", "1299.HK",
-        "BHP.AX", "CBA.AX", "CSL.AX"
-    ]
-
 
 def get_all_global_tickers():
-    """Agrège toutes les listes pour le scan mondial"""
+    """Agrège les tickers des principales bourses mondiales."""
     all_tickers = []
-    all_tickers.extend(get_sp500_tickers())
-    all_tickers.extend(get_nasdaq100_tickers())
-    all_tickers.extend(get_cac40_tickers())
-    all_tickers.extend(get_dax_tickers())
-    all_tickers.extend(get_ftse100_tickers())
-    all_tickers.extend(get_major_europe_japan_manual())
+    print("--- Démarrage de la récupération mondiale des Tickers (via Wikipedia) ---")
 
-    clean_tickers = list(set(all_tickers))
+    # USA (Indices larges)
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies', 0, 'Symbol'))
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/Nasdaq-100', 4, 'Symbol'))
+
+    # Europe (Principales Bourses)
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/CAC_40', 4, 'Ticker', suffix=".PA"))
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/DAX', 4, 'Ticker', suffix=".DE"))
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/FTSE_100_Index', 4, 'Ticker', suffix=".L"))
+
+    # Asie et autres (couverture manuelle pour les bourses difficiles à scraper)
+    print("  > Ajout des leaders Japonais, Suisses, Canadiens (Manuel)...")
+    all_tickers.extend([
+        "7203.T", "6758.T", "9984.T", "6861.T", "8306.T", "9432.T", "7974.T", # Japon (Nikkei Leaders)
+        "NESN.SW", "NOVN.SW", "ROG.SW", "UBSG.SW", "ZURN.SW", # Suisse (Swiss Market Index Leaders)
+        "RY.TO", "TD.TO", "ENB.TO", "SHOP.TO", # Canada
+        "BHP.AX", "CBA.AX", "CSL.AX", "WBC.AX", # Australie
+        "0700.HK", "9988.HK", "1299.HK", # Hong Kong
+    ])
+
+    clean_tickers = list(set(filter(None, all_tickers))) # Nettoyage et dédoublonnage
+    print(f"--- Tickers agrégés : {len(clean_tickers)} ---")
     return clean_tickers
-# --- FIN DE VOS FONCTIONS DE RÉCUPÉRATION ---
 
+# --- 3. ANALYSE PRINCIPALE MULTITHREADÉE ---
 
-# --- ANALYSE PRINCIPALE (4 Critères Fondamentaux) ---
-
-def run_analysis():
-    print("--- Démarrage du Screener Buffett (Final) ---")
-    tickers = get_all_global_tickers()
-    
-    limit_scan = 1500
-    tickers_to_scan = tickers[:limit_scan]
-    
-    undervalued_stocks = []
-    print(f"Total actions à scanner : {len(tickers_to_scan)}")
-    
-    pd.options.mode.chained_assignment = None # Pour éviter les warnings pandas
-
-    for i, ticker in enumerate(tickers_to_scan):
-        if i % 100 == 0:
-            print(f"Progression : {i}/{len(tickers_to_scan)} - {ticker}")
-
-        try:
-            stock = yf.Ticker(ticker)
-
-            try:
-                price = stock.fast_info.last_price
-            except:
-                continue 
-
-            info = stock.info
-            
-            # 1. Vérification du Secteur (Critère Qualitatif)
-            sector = info.get('sector', 'N/A')
-            if sector in EXCLUDED_SECTORS:
-                continue
-
-            # 2. Récupération/Calcul des Ratios (ROBUSTES)
-            
-            # P/E est le plus simple
-            pe_val = get_safe_float(info, 'trailingPE', reject_value=9999.0)
-            
-            # ROE, GPM et D/E sont calculés à partir des états financiers
-            roe_val = calculate_roe(stock)
-            gpm_val = calculate_gpm(stock)
-            de_val = calculate_de_ratio(stock)
-
-            # --- APPLICATION DES FILTRES BUFFETT ---
-            
-            # F1: P/E < 15.0 (Prix)
-            is_pe_ok = (0.0 < pe_val < 15.0)
-            
-            # F2: ROE > 15% (Qualité)
-            is_roe_ok = (roe_val > 0.15)
-            
-            # F3: Marge Brute (GPM) > 20% (Moat)
-            is_gpm_ok = (gpm_val > 0.20)
-            
-            # F4: Dette/Capitaux Propres (D/E) < 1.0 (Sécurité)
-            # LOGIQUE D'EXCEPTION : Si le secteur est exempté, le critère D/E est considéré comme OK
-            is_de_ok = (de_val < 1.0) or (sector in EXEMPTED_DEBT_SECTORS)
-
-
-            # --- ENREGISTREMENT FINAL ---
-            if is_pe_ok and is_roe_ok and is_gpm_ok and is_de_ok:
-                
-                name = info.get('longName', ticker)
-                currency = info.get('currency', 'USD')
-                tag = "Valeur d'Or"
-
-                # Pour les titres exemptés, on peut le mentionner dans le tag ou le log
-                if sector in EXEMPTED_DEBT_SECTORS:
-                    tag = "Valeur d'Or (Dette adaptée)"
-
-                print(f"💰 VALEUR D'OR TROUVÉE: {ticker} - {name} (P/E: {pe_val:.2f}, ROE: {roe_val*100:.2f}%)")
-
-                undervalued_stocks.append({
-                    "symbol": ticker,
-                    "name": name,
-                    "sector": sector,
-                    "pe": round(pe_val, 2),
-                    "roe": round(roe_val * 100, 2),
-                    "gpm": round(gpm_val * 100, 2),
-                    "de_ratio": round(de_val, 2),
-                    "price": round(price, 2),
-                    "currency": currency,
-                    "tag": tag
-                })
+def process_ticker(ticker):
+    """Analyse un seul ticker et applique les 4 filtres de Buffett."""
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
         
-        except Exception:
-            continue
+        # Données de base
+        price = stock.fast_info.last_price
+        sector = info.get('sector', 'N/A')
+
+        # 1. Exclusion Sectorielle
+        if sector in EXCLUDED_SECTORS:
+            return None
+
+        # 2. Calcul des Ratios
+        pe_val = get_safe_float(info, 'trailingPE', reject_value=9999.0)
+        roe_val = calculate_roe(stock)
+        gpm_val = calculate_gpm(stock)
+        de_val = calculate_de_ratio(stock)
+
+        # 3. Application des 4 Filtres Stricts
+        is_pe_ok = (0.0 < pe_val < 15.0)
+        is_roe_ok = (roe_val > 0.15)
+        is_gpm_ok = (gpm_val > 0.20)
+        
+        # LOGIQUE D'EXCEPTION D/E : < 1.0 OU fait partie des secteurs exemptés
+        is_de_ok = (de_val < 1.0) or (sector in EXEMPTED_DEBT_SECTORS)
+
+        if is_pe_ok and is_roe_ok and is_gpm_ok and is_de_ok:
             
+            name = info.get('longName', ticker)
+            currency = info.get('currency', 'USD')
+            tag = "Valeur d'Or"
+
+            if sector in EXEMPTED_DEBT_SECTORS:
+                tag = f"Valeur d'Or (Dette adaptée : {sector})"
+
+            return {
+                "symbol": ticker,
+                "name": name,
+                "sector": sector,
+                "pe": round(pe_val, 2),
+                "roe": round(roe_val * 100, 2),
+                "gpm": round(gpm_val * 100, 2),
+                "de_ratio": round(de_val, 2),
+                "price": round(price, 2),
+                "currency": currency,
+                "tag": tag
+            }
+        return None
+    
+    except Exception:
+        # print(f"Erreur d'analyse pour {ticker}: {e}", file=sys.stderr)
+        return None
+
+def run_global_analysis():
+    all_tickers = get_all_global_tickers()
+    
+    # Limiter la taille du scan pour éviter les timeouts (optionnel)
+    tickers_to_scan = all_tickers[:2500] 
+    
+    print(f"Démarrage de l'analyse multithreadée pour {len(tickers_to_scan)} actions...")
+    
+    # Utilisation du multithreading pour accélérer le processus (Max 10 threads)
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        results = list(executor.map(process_ticker, tickers_to_scan))
+
+    undervalued_stocks = [r for r in results if r is not None]
+
     # Tri par P/E croissant
     undervalued_stocks.sort(key=lambda x: x['pe'])
     
@@ -256,9 +191,11 @@ def run_analysis():
     }
 
     with open("data.json", "w") as f:
-        json.dump(final_data, f)
+        json.dump(final_data, f, indent=4)
     
-    print("--- ANALSE COMPLÈTE. Résultat :", len(undervalued_stocks), "actions trouvées. ---")
+    print(f"--- ANALYSE COMPLÈTE. Résultat : {len(undervalued_stocks)} actions trouvées. ---")
 
 if __name__ == "__main__":
-    run_analysis()
+    # Désactiver les avertissements pandas pour un affichage plus propre
+    pd.options.mode.chained_assignment = None 
+    run_global_analysis()
