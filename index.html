@@ -5,17 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ALLNOS Radar : Valeurs d'Or Buffett</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; text-align: center; margin-bottom: 5px; }
+        /* Styles généraux et de mise en page */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #34495e; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 5px; font-size: 2.5em; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-top: 40px; }
+        p { line-height: 1.6; margin-bottom: 20px; font-size: 1.1em; }
         .update-time { text-align: center; color: #7f8c8d; font-size: 0.9em; margin-bottom: 25px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+
+        /* Styles du Tableau */
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
         th { background: #34495e; color: white; padding: 14px; text-align: left; font-size: 1em; }
         td { padding: 14px; border-bottom: 1px solid #eee; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         tr:hover { background-color: #e8f4f8; }
 
-        /* Classe générale pour les tags de ratios */
+        /* Styles des Tags & Ratios */
         .ratio-tag { 
             padding: 4px 8px; 
             border-radius: 4px; 
@@ -26,22 +31,99 @@
             text-align: center; 
             min-width: 60px;
         }
-
         .tag-value { font-size: 0.8em; padding: 2px 6px; border-radius: 3px; margin-top: 4px; display: inline-block; }
 
-        /* Couleur pour le Tag Strict */
-        .tag-valeur-dor { background-color: #f1c40f; color: #2c3e50; font-weight: bold; } /* Jaune/Or */
+        /* Couleur du Tag principal */
+        .tag-valeur-dor { background-color: #f1c40f; color: #2c3e50; font-weight: bold; } 
         
-        /* Couleurs pour les indicateurs (Vert = OK, Gris = N/A ou Marge de sécurité non garantie) */
+        /* Couleurs pour les indicateurs (Vert = OK, Gris = N/A) */
         .indicator-good { background-color: #27ae60; } 
         .indicator-na { background-color: #95a5a6; } 
+
+        /* Tableau des critères du storytelling */
+        .criteria-table { 
+            width: 100%; 
+            margin-bottom: 30px; 
+            border: 1px solid #ddd;
+        }
+        .criteria-table th, .criteria-table td { 
+            padding: 15px; 
+            text-align: left; 
+            border-bottom: 1px solid #eee;
+        }
+        .criteria-table th { 
+            background-color: #ecf0f1; 
+            font-weight: bold; 
+        }
+        .criteria-table tr:last-child td { border-bottom: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🏆 ALLNOS Radar : les Valeurs d'Or à l'achat</h1>
+    
+    <h1>Déjouez le Bruit du Marché. **Investissez comme un Légende.**</h1>
     <p class="update-time" id="lastUpdate">Chargement des données...</p>
+
+    <p style="text-align: center; font-size: 1.2em; font-weight: 300; margin-bottom: 50px;">
+        Fatigué(e) des tendances éphémères et des conseils volatils ? L'équipe d'ALLNOS a codé les principes d'investissement les plus durables au monde. Notre mission : vous révéler 
+        **les "Valeurs d'Or"** que même Warren Buffett ne pourrait ignorer.
+    </p>
+
+    <h2>Le Secret des Plus Grands Riches</h2>
+    <p>
+        Depuis des décennies, le succès financier ne réside pas dans la spéculation, mais dans la <strong>sélection rigoureuse</strong>. Warren Buffett lui-même l'a dit : "Le prix est ce que vous payez. La valeur est ce que vous recevez."
+    </p>
+    <p>
+        Nous ne cherchons pas à acheter des actions ; nous cherchons à acheter une part d'une **entreprise exceptionnelle**. Notre outil s'appuie sur une triple exigence : l'entreprise doit être de haute **Qualité**, peu ou pas endettée, et disponible à un bon **Prix**.
+    </p>
+
+    <h2>La Rigueur de l'Algorithme, l'Intelligence de l'Humain</h2>
+    <p>
+        Le **ALLNOS Radar** transpose les **Quatre Piliers de l'Analyse de Buffett** en critères quantitatifs stricts pour créer un crible implacable. Nous excluons les secteurs jugés trop complexes (technologie pure, énergie volatile) pour nous concentrer sur la simplicité et la prévisibilité.
+    </p>
+
+    <table class="criteria-table">
+        <thead>
+            <tr>
+                <th>Critère Fondamental</th>
+                <th>Ratio Clé</th>
+                <th>Seuil Buffett</th>
+                <th>La Preuve de Qualité</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>**Qualité**</td>
+                <td>Return on Equity (ROE)</td>
+                <td>**> 15%**</td>
+                <td>L'entreprise génère d'excellents bénéfices avec les fonds des actionnaires.</td>
+            </tr>
+            <tr>
+                <td>**Sécurité**</td>
+                <td>Dette / Capitaux Propres (D/E)</td>
+                <td>**< 1.0**</td>
+                <td>La dette est gérable et l'entreprise est financièrement solide.</td>
+            </tr>
+            <tr>
+                <td>**Moat / Pouvoir de Prix**</td>
+                <td>Marge Brute (GPM)</td>
+                <td>**> 20%**</td>
+                <td>L'entreprise a un avantage concurrentiel lui permettant de fixer ses prix.</td>
+            </tr>
+            <tr>
+                <td>**Prix d'Achat**</td>
+                <td>P/E Ratio</td>
+                <td>**< 15**</td>
+                <td>L'action est sous-évaluée ou justement valorisée.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Cessez de Chercher. Commencez à Sélectionner.</h2>
+    <p>
+        Chaque "**Valeur d'Or**" listée ci-dessous a franchi ces quatre barrières. Ce n'est pas un conseil d'achat, mais un excellent point de départ pour votre analyse qualitative finale.
+    </p>
 
     <table id="stockTable">
         <thead>
@@ -66,7 +148,7 @@
     fetch('data.json')
         .then(response => response.json())
         .then(jsonData => {
-            // Utilisation de jsonData.data.length car 'count' peut être non mis à jour
+            // Affichage de la dernière mise à jour
             document.getElementById('lastUpdate').textContent = `Dernière mise à jour : ${jsonData.last_updated} | ${jsonData.data.length} actions trouvées.`;
             
             const tbody = document.getElementById('tableBody');
@@ -78,27 +160,23 @@
 
             jsonData.data.forEach(stock => {
                 
-                // --- GESTION DU TAG ---
+                // GESTION DU TAG (Inchangée)
                 const tagClass = "tag-valeur-dor";
                 
-                // --- GESTION DES INDICATEURS ET RATION ---
-                
-                // 1. P/E (Prix) : < 15.0
+                // 1. P/E (Prix)
                 const peValue = stock.pe !== undefined && stock.pe !== null ? stock.pe.toFixed(2) : 'N/A';
-                // Par définition du filtre Python, il est OK
                 const peColor = 'indicator-good'; 
 
-                // 2. ROE (Qualité) : > 15.0%
+                // 2. ROE (Qualité)
                 const roeValue = stock.roe !== undefined && stock.roe !== null ? stock.roe.toFixed(2) + '%' : 'N/A';
                 const roeColor = 'indicator-good';
 
-                // 3. Marge Brute (GPM) : > 20.0%
+                // 3. Marge Brute (GPM)
                 const gpmValue = stock.gpm !== undefined && stock.gpm !== null ? stock.gpm.toFixed(2) + '%' : 'N/A';
                 const gpmColor = 'indicator-good';
 
-                // 4. Dette/Capitaux Propres (D/E Ratio) : < 1.0
+                // 4. Dette/Capitaux Propres (D/E Ratio)
                 const deValue = stock.de_ratio !== undefined && stock.de_ratio !== null ? stock.de_ratio.toFixed(2) : 'N/A';
-                // Le script Python filtre stricto sensu, mais on garde la logique de couleur OK
                 const deColor = 'indicator-good';
                 
                 // Affichage du prix
@@ -123,8 +201,10 @@
             });
         })
         .catch(error => {
-            document.getElementById('lastUpdate').textContent = "Erreur de chargement des données. Veuillez vérifier le fichier data.json.";
+            document.getElementById('lastUpdate').textContent = "Erreur de chargement des données. Veuillez vérifier que data.json a été généré.";
             console.error('Erreur:', error);
+            // Afficher le message d'erreur si le chargement échoue
+            document.getElementById('tableBody').innerHTML = "<tr><td colspan='8' style='text-align:center; padding: 30px; color: #e74c3c;'>Impossible de charger les données. Veuillez vérifier que le script Python a fonctionné et que le fichier data.json existe.</td></tr>";
         });
 </script>
 
