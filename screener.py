@@ -6,21 +6,23 @@ import datetime
 # --- 1. FONCTIONS DE RÉCUPÉRATION DYNAMIQUE DES TICKERS (Scraping Wikipedia) ---
 
 def get_sp500_tickers():
-    """Récupère le S&P 500 (USA)"""
+    """Récupère le S&P 500 (USA) et corrige le format des tickers pour yfinance."""
     try:
         print("Récupération S&P 500 (USA)...")
         df = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
+        # Correction du format (ex: BRK.B -> BRK-B)
         return [t.replace('.', '-') for t in df['Symbol'].tolist()]
     except:
         return []
 
 def get_nasdaq100_tickers():
-    """Récupère le NASDAQ 100 (USA)"""
+    """Récupère le NASDAQ 100 (USA) et corrige le format des tickers pour yfinance."""
     try:
         print("Récupération NASDAQ 100 (USA)...")
         df = pd.read_html('https://en.wikipedia.org/wiki/Nasdaq-100')[4]
         col_name = 'Symbol' if 'Symbol' in df.columns else 'Ticker'
-        return df[col_name].tolist()
+        # Correction du format (ex: Ticker.A -> Ticker-A)
+        return [t.replace('.', '-') for t in df[col_name].tolist()]
     except:
         return []
 
@@ -69,15 +71,14 @@ def get_all_global_tickers():
     """Agrège toutes les listes pour le scan mondial"""
     all_tickers = []
     all_tickers.extend(get_sp500_tickers())
-    all_tickers.extend(get_nasdaq100_tickers())
+    all_tickers.extend(get_nasdaq100_tickers()) # Maintenant corrigé pour les points
     all_tickers.extend(get_cac40_tickers())
     all_tickers.extend(get_dax_tickers())
     all_tickers.extend(get_ftse100_tickers())
     all_tickers.extend(get_major_europe_japan_manual())
 
-    # Nettoyage final des formats et suppression des doublons
-    clean_tickers = list(set([t.replace('.', '-') if len(t.split('.')) <= 1 or t.endswith(('.TO', '.AX', '.HK', '.SW', '.MI', '.MC', '.AS')) else t for t in all_tickers]))
-    
+    # Nettoyage final : simple suppression des doublons
+    clean_tickers = list(set(all_tickers))
     return clean_tickers
 
 # --- 2. ANALYSE PRINCIPALE (Critère Strict: P/E < 15 ET ROE > 15%) ---
@@ -102,24 +103,25 @@ def run_analysis():
             try:
                 price = stock.fast_info.last_price
             except:
+                # Ignore si le prix n'est pas disponible (ticker invalide ou non-listé)
                 continue
 
             # Récupération des données fondamentales
             info = stock.info
             pe = info.get('trailingPE')
-            # Le ROE est un float (ex: 0.18 pour 18%). On utilise 0 par défaut.
             roe = info.get('returnOnEquity', 0) 
 
             # --- STRATÉGIE DE SÉLECTION STRICTE : QUALITÉ + PRIX BAS ---
             
-            # P/E doit être inférieur à 15 ET ROE doit être supérieur à 15% (0.15)
+            # P/E doit être disponible, strictement positif et inférieur à 15
+            # ET
+            # ROE doit être supérieur à 15% (0.15)
             cond_strict_buffett = (pe is not None and 0 < pe < 15 and roe > 0.15)
             
             if cond_strict_buffett: 
                 name = info.get('longName', ticker)
                 sector = info.get('sector', 'N/A')
                 currency = info.get('currency', 'USD')
-                # Tag unique pour ce filtre très strict
                 tag = "Valeur d'Or"
 
                 print(f"💰 VALEUR D'OR TROUVÉE: {ticker} - {name} (P/E: {pe:.2f}, ROE: {roe*100:.2f}%)")
@@ -129,4 +131,29 @@ def run_analysis():
                     "name": name,
                     "sector": sector,
                     "pe": round(pe, 2),
-                    # On stocke le ROE en pourcentage pour l'affichage HTML
+                    "roe": round(roe * 100, 2),
+                    "price": round(price, 2),
+                    "currency": currency,
+                    "tag": tag
+                })
+        
+        except Exception:
+            # Continue si yfinance échoue à récupérer les infos (erreur de connexion, ticker exotique)
+            continue
+            
+    # Tri par P/E croissant
+    undervalued_stocks.sort(key=lambda x: x['pe'])
+    
+    final_data = {
+        "last_updated": datetime.datetime.utcnow().strftime("%d/%m/%Y à %H:%M GMT"),
+        "count": len(undervalued_stocks),
+        "data": undervalued_stocks
+    }
+
+    with open("data.json", "w") as f:
+        json.dump(final_data, f)
+    
+    print("--- ANALSE COMPLÈTE. Résultat :", len(undervalued_stocks), "actions trouvées. ---")
+
+if __name__ == "__main__":
+    run_analysis()
