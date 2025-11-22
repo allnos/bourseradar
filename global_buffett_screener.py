@@ -15,7 +15,6 @@ EXCLUDED_SECTORS = [
 ]
 
 # Secteurs exemptés du critère strict de Dette/Capitaux Propres (D/E < 1.0).
-# Car ils utilisent la dette ou l'effet de levier de manière structurelle (Exigence de Buffett adaptée).
 EXEMPTED_DEBT_SECTORS = ['Financial Services', 'Utilities']
 
 
@@ -30,40 +29,59 @@ def get_safe_float(info, key, reject_value):
         return reject_value
 
 def calculate_roe(stock):
-    """Calcule le Return on Equity (ROE) à partir des états financiers (Bilan et Compte de Résultat)."""
+    """Calcule le Return on Equity (ROE). Vérifie l'existence des données."""
     try:
-        # Récupération des 4 dernières années
-        net_income = stock.financials.loc['Net Income'].iloc[0]
-        total_equity = stock.balance_sheet.loc['Total Stockholder Equity'].iloc[0]
+        financials = stock.financials
+        balance_sheet = stock.balance_sheet
+        if financials.empty or balance_sheet.empty:
+            return -1.0 # Échec
+            
+        net_income = financials.loc['Net Income'].iloc[0]
+        total_equity = balance_sheet.loc['Total Stockholder Equity'].iloc[0]
+        
         if total_equity > 0:
             return net_income / total_equity
-        return -1.0 # Échec du filtre
+        return -1.0 
+    except KeyError:
+        # Index manquant dans les données financières
+        return -1.0
     except Exception:
         return -1.0
 
 def calculate_gpm(stock):
-    """Calcule la Marge Brute (Gross Profit Margin) à partir du Compte de Résultat."""
+    """Calcule la Marge Brute (Gross Profit Margin). Vérifie l'existence des données."""
     try:
-        gross_profit = stock.financials.loc['Gross Profit'].iloc[0]
-        total_revenue = stock.financials.loc['Total Revenue'].iloc[0]
+        financials = stock.financials
+        if financials.empty:
+            return -1.0
+            
+        gross_profit = financials.loc['Gross Profit'].iloc[0]
+        total_revenue = financials.loc['Total Revenue'].iloc[0]
+        
         if total_revenue > 0:
             return gross_profit / total_revenue
+        return -1.0
+    except KeyError:
         return -1.0
     except Exception:
         return -1.0
 
 def calculate_de_ratio(stock):
-    """Calcule le Ratio Dette/Capitaux Propres (Debt-to-Equity)."""
+    """Calcule le Ratio Dette/Capitaux Propres (Debt-to-Equity) de manière robuste."""
     try:
-        # Tente de récupérer les données précises du bilan
-        total_debt = stock.balance_sheet.loc['Total Debt'].iloc[0]
-        total_equity = stock.balance_sheet.loc['Total Stockholder Equity'].iloc[0]
+        balance_sheet = stock.balance_sheet
+        if balance_sheet.empty:
+            raise ValueError("Balance sheet empty")
 
+        # Tente de récupérer les données précises, sinon utilise les valeurs de l'objet info
+        total_debt = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else get_safe_float(stock.info, 'totalDebt', 0.0)
+        total_equity = balance_sheet.loc['Total Stockholder Equity'].iloc[0] if 'Total Stockholder Equity' in balance_sheet.index else get_safe_float(stock.info, 'totalStockholderEquity', -1.0)
+        
         if total_equity > 0:
             return total_debt / total_equity
-        return 9999.0 # Échec du filtre (équité négative)
+        return 9999.0 
     except Exception:
-        # Fallback pour les actions avec des données de bilan limitées
+        # Fallback si les données détaillées ont échoué
         total_debt = get_safe_float(stock.info, 'totalDebt', reject_value=0.0)
         total_equity = get_safe_float(stock.info, 'totalStockholderEquity', reject_value=-1.0)
         if total_equity > 0:
@@ -73,30 +91,42 @@ def calculate_de_ratio(stock):
 
 # --- 2. FONCTIONS DE RÉCUPÉRATION DES TICKERS (VIA WIKIPEDIA) ---
 
-def get_tickers_from_wiki(url, table_index, symbol_col, suffix=""):
-    """Fonction générique pour scraper les tickers depuis une page Wikipedia."""
+def get_tickers_from_wiki(url, table_index, potential_cols, suffix=""):
+    """Fonction générique pour scraper les tickers, avec colonnes flexibles."""
     try:
-        print(f"  > Scraping de {url}...")
-        df = pd.read_html(url)[table_index]
-        return [t.replace('.', '-') + suffix for t in df[symbol_col].tolist()]
+        df_list = pd.read_html(url, header=0) 
+        if not df_list or len(df_list) <= table_index:
+            return []
+            
+        df = df_list[table_index]
+        
+        # Trouve le nom de colonne correct
+        symbol_col = next((col for col in potential_cols if col in df.columns), None)
+        
+        if symbol_col:
+            # Nettoie les données et applique le suffixe
+            return [str(t).replace('.', '-') + suffix for t in df[symbol_col].tolist() if pd.notna(t)]
+        else:
+            # print(f"  > Erreur: Colonne de symbole non trouvée dans {url}")
+            return []
     except Exception:
         return []
 
 def get_all_global_tickers():
-    """Agrège les tickers des principales bourses mondiales (plus de 7000 actions)."""
+    """Agrège les tickers des principales bourses mondiales."""
     all_tickers = []
     print("--- Démarrage de la récupération mondiale des Tickers (via Wikipedia) ---")
 
-    # USA (Indices larges)
-    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies', 0, 'Symbol'))
-    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/Nasdaq-100', 4, 'Symbol'))
+    # USA
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies', 0, ['Symbol', 'Ticker']))
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/Nasdaq-100', 4, ['Symbol', 'Ticker']))
     
-    # Europe (Principales Bourses)
-    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/CAC_40', 4, 'Ticker', suffix=".PA"))
-    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/DAX', 4, 'Ticker', suffix=".DE"))
-    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/FTSE_100_Index', 4, 'Ticker', suffix=".L"))
+    # Europe
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/CAC_40', 4, ['Ticker'], suffix=".PA"))
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/DAX', 4, ['Ticker'], suffix=".DE"))
+    all_tickers.extend(get_tickers_from_wiki('https://en.wikipedia.org/wiki/FTSE_100_Index', 4, ['Ticker'], suffix=".L"))
 
-    # Asie et autres (couverture manuelle pour les bourses difficiles à scraper)
+    # Asie et autres (couverture manuelle)
     print("  > Ajout des leaders Japonais, Suisses, Canadiens, etc. (Liste manuelle)...")
     all_tickers.extend([
         "7203.T", "6758.T", "9984.T", "6861.T", "8306.T", "9432.T", "7974.T", # Japon
@@ -114,16 +144,24 @@ def get_all_global_tickers():
 # --- 3. ANALYSE PRINCIPALE MULTITHREADÉE ---
 
 def process_ticker(ticker):
-    """Analyse un seul ticker en appliquant les 4 filtres de Buffett."""
+    """Analyse un seul ticker en appliquant les 4 filtres de Buffett avec gestion d'erreurs."""
     try:
         stock = yf.Ticker(ticker)
         info = stock.info
         
-        # Données de base
-        price = stock.fast_info.last_price
+        if not info:
+             return None
+
+        # Tente d'obtenir un prix de manière sécurisée
+        price = get_safe_float(info, 'regularMarketPrice', reject_value=-1.0)
+        if price <= 0:
+             price = get_safe_float(info, 'currentPrice', reject_value=-1.0)
+             if price <= 0:
+                return None
+
         sector = info.get('sector', 'N/A')
 
-        # 1. Exclusion Sectorielle (Qualitatif)
+        # 1. Exclusion Sectorielle
         if sector in EXCLUDED_SECTORS:
             return None
 
@@ -133,18 +171,11 @@ def process_ticker(ticker):
         gpm_val = calculate_gpm(stock)
         de_val = calculate_de_ratio(stock)
 
-        # 3. Application des 4 Filtres Stricts
-        
-        # F1: P/E < 15.0 (Prix d'Achat)
+        # 3. Application des 4 Filtres
         is_pe_ok = (0.0 < pe_val < 15.0)
-        
-        # F2: ROE > 15% (Qualité)
         is_roe_ok = (roe_val > 0.15)
-        
-        # F3: GPM > 20% (Moat / Pouvoir de Prix)
         is_gpm_ok = (gpm_val > 0.20)
-        
-        # F4: D/E < 1.0 (Sécurité) - AVEC EXCEPTION
+        # Règle D/E avec exception
         is_de_ok = (de_val < 1.0) or (sector in EXEMPTED_DEBT_SECTORS)
 
         if is_pe_ok and is_roe_ok and is_gpm_ok and is_de_ok:
@@ -153,7 +184,6 @@ def process_ticker(ticker):
             currency = info.get('currency', 'USD')
             tag = "Valeur d'Or"
 
-            # Tag spécial pour les exceptions de dette
             if sector in EXEMPTED_DEBT_SECTORS:
                 tag = f"Valeur d'Or (Dette adaptée : {sector})"
 
@@ -162,8 +192,8 @@ def process_ticker(ticker):
                 "name": name,
                 "sector": sector,
                 "pe": round(pe_val, 2),
-                "roe": round(roe_val * 100, 2), # Affiché en pourcentage
-                "gpm": round(gpm_val * 100, 2), # Affiché en pourcentage
+                "roe": round(roe_val * 100, 2),
+                "gpm": round(gpm_val * 100, 2),
                 "de_ratio": round(de_val, 2),
                 "price": round(price, 2),
                 "currency": currency,
@@ -172,41 +202,4 @@ def process_ticker(ticker):
         return None
     
     except Exception:
-        # Ignore les erreurs (ex: ticker non trouvé, données manquantes)
-        return None
-
-def run_global_analysis():
-    print("--- Démarrage du Screener Buffett Global V2.0 ---")
-    all_tickers = get_all_global_tickers()
-    
-    # Limiter la taille du scan pour éviter les timeouts potentiels (ajuster si nécessaire)
-    tickers_to_scan = all_tickers[:2500] 
-    
-    print(f"Démarrage de l'analyse multithreadée sur {len(tickers_to_scan)} actions...")
-    
-    # Utilisation du multithreading pour accélérer le processus (Max 10 threads)
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        results = list(executor.map(process_ticker, tickers_to_scan))
-
-    # Filtrer les résultats valides
-    undervalued_stocks = [r for r in results if r is not None]
-
-    # Tri par P/E croissant pour identifier les meilleures affaires
-    undervalued_stocks.sort(key=lambda x: x['pe'])
-    
-    final_data = {
-        "last_updated": datetime.datetime.utcnow().strftime("%d/%m/%Y à %H:%M GMT"),
-        "count": len(undervalued_stocks),
-        "data": undervalued_stocks
-    }
-
-    # Sauvegarde des résultats au format JSON
-    with open("data.json", "w") as f:
-        json.dump(final_data, f, indent=4)
-    
-    print(f"--- ANALYSE COMPLÈTE. {len(undervalued_stocks)} Valeurs d'Or trouvées. (data.json généré) ---")
-
-if __name__ == "__main__":
-    # Désactiver les avertissements pandas pour un affichage plus propre
-    pd.options.mode.chained_assignment = None 
-    run_global_analysis()
+        # Capture
