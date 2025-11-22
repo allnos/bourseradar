@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ALLNOS Radar : Valeurs d'Or Buffett</title>
     <style>
-        /* Styles généraux et de mise en page */
+        /* Styles généraux */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #34495e; }
         .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; text-align: center; margin-bottom: 5px; font-size: 2.5em; }
@@ -13,14 +13,14 @@
         p { line-height: 1.6; margin-bottom: 20px; font-size: 1.1em; }
         .update-time { text-align: center; color: #7f8c8d; font-size: 0.9em; margin-bottom: 25px; }
 
-        /* Styles du Tableau */
+        /* Tableau */
         table { width: 100%; border-collapse: collapse; margin-top: 30px; }
         th { background: #34495e; color: white; padding: 14px; text-align: left; font-size: 1em; }
         td { padding: 14px; border-bottom: 1px solid #eee; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         tr:hover { background-color: #e8f4f8; }
 
-        /* Styles des Tags & Ratios */
+        /* Tags & Ratios */
         .ratio-tag { 
             padding: 4px 8px; 
             border-radius: 4px; 
@@ -32,30 +32,14 @@
             min-width: 60px;
         }
         .tag-value { font-size: 0.8em; padding: 2px 6px; border-radius: 3px; margin-top: 4px; display: inline-block; }
-
-        /* Couleur du Tag principal */
         .tag-valeur-dor { background-color: #f1c40f; color: #2c3e50; font-weight: bold; } 
-        
-        /* Couleurs pour les indicateurs (Vert = OK, Gris = N/A) */
         .indicator-good { background-color: #27ae60; } 
         .indicator-na { background-color: #95a5a6; } 
 
-        /* Tableau des critères du storytelling */
-        .criteria-table { 
-            width: 100%; 
-            margin-bottom: 30px; 
-            border: 1px solid #ddd;
-        }
-        .criteria-table th, .criteria-table td { 
-            padding: 15px; 
-            text-align: left; 
-            border-bottom: 1px solid #eee;
-        }
-        .criteria-table th { 
-            background-color: #ecf0f1; 
-            font-weight: bold; 
-        }
-        .criteria-table tr:last-child td { border-bottom: none; }
+        /* Tableau Storytelling */
+        .criteria-table { width: 100%; margin-bottom: 30px; border: 1px solid #ddd; }
+        .criteria-table th, .criteria-table td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        .criteria-table th { background-color: #ecf0f1; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -66,21 +50,14 @@
     <p class="update-time" id="lastUpdate">Chargement des données...</p>
 
     <p style="text-align: center; font-size: 1.2em; font-weight: 300; margin-bottom: 50px;">
-        Fatigué(e) des tendances éphémères et des conseils volatils ? L'équipe d'ALLNOS a codé les principes d'investissement les plus durables au monde. Notre mission : vous révéler 
+        Fatigué(e) des tendances éphémères ? L'équipe d'ALLNOS a codé les principes d'investissement les plus durables au monde. Notre mission : vous révéler 
         **les "Valeurs d'Or"** que même Warren Buffett ne pourrait ignorer.
     </p>
 
     <h2>Le Secret des Plus Grands Riches</h2>
     <p>
-        Depuis des décennies, le succès financier ne réside pas dans la spéculation, mais dans la <strong>sélection rigoureuse</strong>. Warren Buffett lui-même l'a dit : "Le prix est ce que vous payez. La valeur est ce que vous recevez."
-    </p>
-    <p>
-        Nous ne cherchons pas à acheter des actions ; nous cherchons à acheter une part d'une **entreprise exceptionnelle**. Notre outil s'appuie sur une triple exigence : l'entreprise doit être de haute **Qualité**, peu ou pas endettée, et disponible à un bon **Prix**.
-    </p>
-
-    <h2>La Rigueur de l'Algorithme, l'Intelligence de l'Humain</h2>
-    <p>
-        Le **ALLNOS Radar** transpose les **Quatre Piliers de l'Analyse de Buffett** en critères quantitatifs stricts pour créer un crible implacable. Nous excluons les secteurs jugés trop complexes (technologie pure, énergie volatile) pour nous concentrer sur la simplicité et la prévisibilité.
+        Warren Buffett l'a dit : "Le prix est ce que vous payez. La valeur est ce que vous recevez." 
+        Notre outil sélectionne les entreprises de haute **Qualité**, peu endettées, disponibles à un bon **Prix**.
     </p>
 
     <table class="criteria-table">
@@ -103,7 +80,7 @@
                 <td>**Sécurité**</td>
                 <td>Dette / Capitaux Propres (D/E)</td>
                 <td>**< 1.0**</td>
-                <td>La dette est gérable et l'entreprise est financièrement solide.</td>
+                <td>La dette est gérable (Sauf Banques/Services Publics).</td>
             </tr>
             <tr>
                 <td>**Moat / Pouvoir de Prix**</td>
@@ -121,9 +98,7 @@
     </table>
 
     <h2>Cessez de Chercher. Commencez à Sélectionner.</h2>
-    <p>
-        Chaque "**Valeur d'Or**" listée ci-dessous a franchi ces quatre barrières. Ce n'est pas un conseil d'achat, mais un excellent point de départ pour votre analyse qualitative finale.
-    </p>
+    <p>Chaque "**Valeur d'Or**" ci-dessous a franchi ces quatre barrières (ou bénéficie d'une exception sectorielle validée).</p>
 
     <table id="stockTable">
         <thead>
@@ -133,8 +108,8 @@
                 <th>Secteur</th>
                 <th>P/E Ratio (< 15)</th>
                 <th>ROE (> 15%)</th>
-                <th>Marge Brute (GPM) (> 20%)</th>
-                <th>Dette/Capitaux Propres (D/E) (< 1.0)</th>
+                <th>Marge Brute (> 20%)</th>
+                <th>Dette/Eq (< 1.0)</th>
                 <th>Prix</th>
             </tr>
         </thead>
@@ -144,67 +119,46 @@
 </div>
 
 <script>
-    // Fonction pour charger les données
     fetch('data.json')
         .then(response => response.json())
         .then(jsonData => {
-            // Affichage de la dernière mise à jour
             document.getElementById('lastUpdate').textContent = `Dernière mise à jour : ${jsonData.last_updated} | ${jsonData.data.length} actions trouvées.`;
             
             const tbody = document.getElementById('tableBody');
             
             if(jsonData.data.length === 0) {
-                tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding: 30px;'>Aucune 'Valeur d'Or' trouvée aujourd'hui selon les 4 critères stricts de Buffett.</td></tr>";
+                tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding: 30px;'>Aucune 'Valeur d'Or' trouvée aujourd'hui.</td></tr>";
                 return;
             }
 
             jsonData.data.forEach(stock => {
-                
-                // GESTION DU TAG (Inchangée)
                 const tagClass = "tag-valeur-dor";
                 
-                // 1. P/E (Prix)
-                const peValue = stock.pe !== undefined && stock.pe !== null ? stock.pe.toFixed(2) : 'N/A';
-                const peColor = 'indicator-good'; 
-
-                // 2. ROE (Qualité)
-                const roeValue = stock.roe !== undefined && stock.roe !== null ? stock.roe.toFixed(2) + '%' : 'N/A';
-                const roeColor = 'indicator-good';
-
-                // 3. Marge Brute (GPM)
-                const gpmValue = stock.gpm !== undefined && stock.gpm !== null ? stock.gpm.toFixed(2) + '%' : 'N/A';
-                const gpmColor = 'indicator-good';
-
-                // 4. Dette/Capitaux Propres (D/E Ratio)
-                const deValue = stock.de_ratio !== undefined && stock.de_ratio !== null ? stock.de_ratio.toFixed(2) : 'N/A';
-                const deColor = 'indicator-good';
-                
-                // Affichage du prix
-                const priceDisplay = stock.price !== undefined && stock.price !== null ? `${stock.price.toFixed(2)} ${stock.currency}` : 'N/A';
-
+                // Formatage sécurisé des données
+                const peVal = stock.pe ? stock.pe.toFixed(2) : 'N/A';
+                const roeVal = stock.roe ? stock.roe.toFixed(2) + '%' : 'N/A';
+                const gpmVal = stock.gpm ? stock.gpm.toFixed(2) + '%' : 'N/A';
+                const deVal = stock.de_ratio ? stock.de_ratio.toFixed(2) : 'N/A';
+                const priceVal = stock.price ? `${stock.price.toFixed(2)} ${stock.currency}` : 'N/A';
 
                 const row = `<tr>
                     <td>
-                        <b>${stock.symbol}</b>
-                        <br>
+                        <b>${stock.symbol}</b><br>
                         <span class="tag-value ${tagClass}">${stock.tag}</span>
                     </td>
                     <td>${stock.name}</td>
                     <td>${stock.sector}</td>
-                    <td><span class="ratio-tag ${peColor}">${peValue}</span></td>
-                    <td><span class="ratio-tag ${roeColor}">${roeValue}</span></td>
-                    <td><span class="ratio-tag ${gpmColor}">${gpmValue}</span></td>
-                    <td><span class="ratio-tag ${deColor}">${deValue}</span></td>
-                    <td>${priceDisplay}</td>
+                    <td><span class="ratio-tag indicator-good">${peVal}</span></td>
+                    <td><span class="ratio-tag indicator-good">${roeVal}</span></td>
+                    <td><span class="ratio-tag indicator-good">${gpmVal}</span></td>
+                    <td><span class="ratio-tag indicator-good">${deVal}</span></td>
+                    <td>${priceVal}</td>
                 </tr>`;
                 tbody.innerHTML += row;
             });
         })
         .catch(error => {
-            document.getElementById('lastUpdate').textContent = "Erreur de chargement des données. Veuillez vérifier que data.json a été généré.";
-            console.error('Erreur:', error);
-            // Afficher le message d'erreur si le chargement échoue
-            document.getElementById('tableBody').innerHTML = "<tr><td colspan='8' style='text-align:center; padding: 30px; color: #e74c3c;'>Impossible de charger les données. Veuillez vérifier que le script Python a fonctionné et que le fichier data.json existe.</td></tr>";
+            document.getElementById('lastUpdate').textContent = "Erreur : fichier data.json introuvable.";
         });
 </script>
 
