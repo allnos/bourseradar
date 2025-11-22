@@ -13,6 +13,11 @@ EXCLUDED_SECTORS = [
     'Capital Goods', 'Industrials' 
 ]
 
+# Secteurs exemptés du critère strict de Dette/Capitaux Propres (< 1.0)
+# Car ils utilisent la dette ou l'effet de levier de manière structurelle (Banques, Utilities)
+EXEMPTED_DEBT_SECTORS = ['Financial Services', 'Utilities']
+
+
 # --- FONCTIONS UTILITAIRES DE SÉCURITÉ ---
 
 def get_safe_float(info, key, reject_value):
@@ -34,7 +39,7 @@ def calculate_roe(stock):
         
         if total_equity > 0:
             return net_income / total_equity
-        return -1.0 # Rejet si l'équité est négative ou nulle
+        return -1.0 
     except Exception:
         return -1.0
 
@@ -57,21 +62,27 @@ def calculate_de_ratio(stock):
     """Calcule le Ratio Dette/Capitaux Propres (Debt-to-Equity) à partir du bilan."""
     try:
         # Dette Totale (Total Debt)
-        total_debt = stock.balance_sheet.loc['Total Debt'].iloc[0]
+        # Utiliser l'info dict comme fallback si le bilan est vide pour certaines actions 
+        total_debt = get_safe_float(stock.info, 'totalDebt', reject_value=0.0)
         
         # Capitaux Propres (Total Stockholder Equity)
-        total_equity = stock.balance_sheet.loc['Total Stockholder Equity'].iloc[0]
-        
+        total_equity = get_safe_float(stock.info, 'totalStockholderEquity', reject_value=-1.0)
+
+        # Si les données du bilan sont disponibles, utiliser la méthode .loc pour la robustesse
+        if not stock.balance_sheet.empty and 'Total Debt' in stock.balance_sheet.index:
+             total_debt = stock.balance_sheet.loc['Total Debt'].iloc[0]
+             total_equity = stock.balance_sheet.loc['Total Stockholder Equity'].iloc[0]
+
         if total_equity > 0:
             return total_debt / total_equity
         return 9999.0 # Rejet si l'équité est négative ou nulle
     except Exception:
         return 9999.0
 
-# --- 1. FONCTIONS DE RÉCUPÉRATION DYNAMIQUE DES TICKERS (Inchangées) ---
-# ... (Les fonctions get_sp500_tickers, get_nasdaq100_tickers, etc., doivent être ici) ...
-# Nous omettons leur code ici pour la clarté, mais elles doivent être dans votre fichier.
 
+# --- FONCTIONS DE RÉCUPÉRATION DYNAMIQUE DES TICKERS (Inclure la vôtre ici) ---
+
+# --- DÉBUT DE VOS FONCTIONS DE RÉCUPÉRATION ---
 def get_sp500_tickers():
     """Récupère le S&P 500 (USA) et corrige le format des tickers pour yfinance."""
     try:
@@ -144,12 +155,13 @@ def get_all_global_tickers():
 
     clean_tickers = list(set(all_tickers))
     return clean_tickers
+# --- FIN DE VOS FONCTIONS DE RÉCUPÉRATION ---
 
 
-# --- 2. ANALYSE PRINCIPALE (4 Critères Fondamentaux) ---
+# --- ANALYSE PRINCIPALE (4 Critères Fondamentaux) ---
 
 def run_analysis():
-    print("--- Démarrage du Screener Buffett (Mode Robuste : Balance Sheet + Financials) ---")
+    print("--- Démarrage du Screener Buffett (Final) ---")
     tickers = get_all_global_tickers()
     
     limit_scan = 1500
@@ -158,8 +170,7 @@ def run_analysis():
     undervalued_stocks = []
     print(f"Total actions à scanner : {len(tickers_to_scan)}")
     
-    # Préchauffage du cache pandas pour éviter les avertissements futurs
-    pd.options.mode.chained_assignment = None 
+    pd.options.mode.chained_assignment = None # Pour éviter les warnings pandas
 
     for i, ticker in enumerate(tickers_to_scan):
         if i % 100 == 0:
@@ -175,17 +186,17 @@ def run_analysis():
 
             info = stock.info
             
-            # 1. Vérification du Secteur (Critère Qualitatif de Simplicité)
+            # 1. Vérification du Secteur (Critère Qualitatif)
             sector = info.get('sector', 'N/A')
             if sector in EXCLUDED_SECTORS:
                 continue
 
             # 2. Récupération/Calcul des Ratios (ROBUSTES)
             
-            # P/E est généralement bien renseigné dans info
+            # P/E est le plus simple
             pe_val = get_safe_float(info, 'trailingPE', reject_value=9999.0)
             
-            # ROE, GPM et D/E sont calculés à partir des états financiers (plus fiable)
+            # ROE, GPM et D/E sont calculés à partir des états financiers
             roe_val = calculate_roe(stock)
             gpm_val = calculate_gpm(stock)
             de_val = calculate_de_ratio(stock)
@@ -202,10 +213,9 @@ def run_analysis():
             is_gpm_ok = (gpm_val > 0.20)
             
             # F4: Dette/Capitaux Propres (D/E) < 1.0 (Sécurité)
-            is_de_ok = (de_val < 1.0)
-            
-            # Ligne de DÉBOGAGE (optionnel mais utile)
-            # print(f"DEBUG: {ticker} - P/E:{is_pe_ok} ({pe_val:.2f}), ROE:{is_roe_ok} ({roe_val*100:.2f}%), GPM:{is_gpm_ok} ({gpm_val*100:.2f}%), D/E:{is_de_ok} ({de_val:.2f})")
+            # LOGIQUE D'EXCEPTION : Si le secteur est exempté, le critère D/E est considéré comme OK
+            is_de_ok = (de_val < 1.0) or (sector in EXEMPTED_DEBT_SECTORS)
+
 
             # --- ENREGISTREMENT FINAL ---
             if is_pe_ok and is_roe_ok and is_gpm_ok and is_de_ok:
@@ -213,6 +223,10 @@ def run_analysis():
                 name = info.get('longName', ticker)
                 currency = info.get('currency', 'USD')
                 tag = "Valeur d'Or"
+
+                # Pour les titres exemptés, on peut le mentionner dans le tag ou le log
+                if sector in EXEMPTED_DEBT_SECTORS:
+                    tag = "Valeur d'Or (Dette adaptée)"
 
                 print(f"💰 VALEUR D'OR TROUVÉE: {ticker} - {name} (P/E: {pe_val:.2f}, ROE: {roe_val*100:.2f}%)")
 
@@ -229,8 +243,7 @@ def run_analysis():
                     "tag": tag
                 })
         
-        except Exception as e:
-            # print(f"Erreur robuste pour {ticker}: {e}")
+        except Exception:
             continue
             
     # Tri par P/E croissant
