@@ -1,0 +1,40 @@
+name: Update Stock Data
+
+on:
+  schedule:
+    # Cette ligne signifie : "À 00h00 UTC tous les jours"
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Permet de lancer le robot manuellement (bouton)
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Récupération du code
+      uses: actions/checkout@v3
+
+    - name: Installation de Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Installation des outils (yfinance)
+      run: |
+        pip install -r requirements.txt
+
+    - name: Lancement de l'analyse (screener.py)
+      run: |
+        python screener.py
+
+    - name: Sauvegarde des résultats
+      run: |
+        git config --global user.name 'GitHub Action'
+        git config --global user.email 'action@github.com'
+        git add data.json
+        # On ne commite que s'il y a du changement
+        git commit -m "Mise à jour quotidienne auto" || exit 0
+        git push
