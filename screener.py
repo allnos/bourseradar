@@ -4,7 +4,7 @@ import json
 import datetime
 import sys
 
-# --- FONCTION UTILITAIRE DE SÉCURITÉ ---
+# --- FONCTION UTILITAIRE DE SÉCURITÉ (Inchangée) ---
 def get_safe_float(info, key, reject_value):
     """Récupère une valeur et garantit qu'elle est un float. Sinon, renvoie une valeur de rejet."""
     val = info.get(key)
@@ -121,15 +121,54 @@ def run_analysis():
             # Récupération sécurisée : ROE par défaut à une valeur MIN pour s'assurer qu'il est rejeté s'il est manquant
             roe_val = get_safe_float(info, 'returnOnEquity', reject_value=-1.0) 
 
-            # --- FILTRES STRICTS (Valeurs garanties en float) ---
+            # --- FILTRES STRICTS (DOUBLE VÉRIFICATION DE PRÉCISION) ---
             
-            # P/E doit être strictement entre 0 et 15
+            # P/E doit être strictement entre 0 et 14.9999 (pour être sûr d'exclure 15.00)
             is_pe_ok = (0.0 < pe_val < 15.0)
             
-            # ROE doit être strictement supérieur à 0.15 (15%)
+            # ROE doit être strictement supérieur à 0.15
             is_roe_ok = (roe_val > 0.15)
             
             # Ligne de DÉBOGAGE CRITIQUE : Vérifiez vos logs GitHub Action !
-            print(f"DEBUG: {ticker} - P/E: {pe_val:.2f} (OK: {is_pe_ok}), ROE: {roe_val*100:.2f}% (OK: {is_roe_ok})")
+            print(f"DEBUG: {ticker} - P/E: {pe_val:.4f} (OK: {is_pe_ok}), ROE: {roe_val*100:.4f}% (OK: {is_roe_ok})")
 
-            # --- EN
+            # --- ENREGISTREMENT FINAL ---
+            if is_pe_ok and is_roe_ok:
+                
+                name = info.get('longName', ticker)
+                sector = info.get('sector', 'N/A')
+                currency = info.get('currency', 'USD')
+                tag = "Valeur d'Or"
+
+                print(f"💰 VALEUR D'OR TROUVÉE: {ticker} - {name} (P/E: {pe_val:.2f}, ROE: {roe_val*100:.2f}%)")
+
+                undervalued_stocks.append({
+                    "symbol": ticker,
+                    "name": name,
+                    "sector": sector,
+                    "pe": round(pe_val, 2),
+                    "roe": round(roe_val * 100, 2),
+                    "price": round(price, 2),
+                    "currency": currency,
+                    "tag": tag
+                })
+        
+        except Exception:
+            continue
+            
+    # Tri par P/E croissant
+    undervalued_stocks.sort(key=lambda x: x['pe'])
+    
+    final_data = {
+        "last_updated": datetime.datetime.utcnow().strftime("%d/%m/%Y à %H:%M GMT"),
+        "count": len(undervalued_stocks),
+        "data": undervalued_stocks
+    }
+
+    with open("data.json", "w") as f:
+        json.dump(final_data, f)
+    
+    print("--- ANALSE COMPLÈTE. Résultat :", len(undervalued_stocks), "actions trouvées. ---")
+
+if __name__ == "__main__":
+    run_analysis()
