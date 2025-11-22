@@ -40,34 +40,19 @@
 </div>
 
 <script>
-    // Fonction pour charger les données
-    fetch('data.json')
-        .then(response => response.json())
-        .then(jsonData => {
-            document.getElementById('lastUpdate').textContent = "Dernière mise à jour : " + jsonData.last_updated;
-            
-            const tbody = document.getElementById('tableBody');
-            // Si la liste est vide
-            if(jsonData.data.length === 0) {
-                tbody.innerHTML = "<tr><td colspan='5' style='text-align:center'>Aucune valeur trouvée selon vos critères aujourd'hui.</td></tr>";
-                return;
-            }
-
-            jsonData.data.forEach(stock => {
+   jsonData.data.forEach(stock => {
+                // Couleur du badge selon le type d'opportunité
+                let badgeColor = stock.tag === "Sous-évalué" ? "#27ae60" : "#2980b9";
+                
                 const row = `<tr>
-                    <td><b>${stock.symbol}</b></td>
+                    <td><b>${stock.symbol}</b> <br> <span style="font-size:0.8em; color:${badgeColor}">${stock.tag}</span></td>
                     <td>${stock.name}</td>
                     <td>${stock.sector}</td>
-                    <td><span class="pe-tag">${stock.pe}</span></td>
+                    <td><span class="pe-tag" style="background-color:${badgeColor}">${stock.pe}</span></td>
                     <td>${stock.price} ${stock.currency}</td>
                 </tr>`;
                 tbody.innerHTML += row;
             });
-        })
-        .catch(error => {
-            document.getElementById('lastUpdate').textContent = "En attente de la première mise à jour de minuit...";
-            console.log('Le fichier data.json n\'existe pas encore, c\'est normal si vous venez de créer le site.', error);
-        });
 </script>
 
 </body>
