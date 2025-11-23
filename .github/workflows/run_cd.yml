@@ -1,8 +1,8 @@
-name: Scan A-B (Minuit)
+name: Scan C-D (2h du Matin)
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Tous les jours à 02:00 (2h du Matin)
+    - cron: '0 2 * * *' # Tous les jours à 02:00 (2h du Matin)
   workflow_dispatch:
 
 jobs:
@@ -25,10 +25,10 @@ jobs:
       run: |
         pip install yfinance pandas lxml html5lib requests beautifulsoup4
 
-    - name: Run Screener for A-B
+    - name: Run Screener for C-D
       run: |
-        # Lancement avec l'argument 'A-B'
-        python screener.py "A-B"
+        # Lancement avec l'argument 'C-D'
+        python screener.py "C-D"
 
     - name: Commit and Push
       run: |
